@@ -232,7 +232,7 @@ export default function Home() {
             <span className="italic font-thin" style={{ fontFamily: "'PP Editorial New', serif" }}>smart assistant</span>{" "}
             for
             <br />
-            HS Code classification.
+            customs classification.
           </h1>
           <p className="text-gray-500 text-base md:text-lg">
             AI-powered customs classification for ASEAN imports & exports

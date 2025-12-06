@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Thai HS Code Assistant",
-  description: "AI-powered HS Code classification for Thai customs",
+  title: "Customs AI - Smart Customs Classification",
+  description: "AI-powered customs classification for ASEAN imports & exports",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
