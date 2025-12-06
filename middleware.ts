@@ -1,5 +1,4 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export default async function middleware(request: NextRequest) {
@@ -9,11 +8,31 @@ export default async function middleware(request: NextRequest) {
     const clerkUrl = new URL(path, "https://frontend-api.clerk.dev");
     clerkUrl.search = request.nextUrl.search;
 
-    const headers = new Headers(request.headers);
+    // Clone headers and add proxy header
+    const headers = new Headers();
+    request.headers.forEach((value, key) => {
+      // Skip host header as it should be the target host
+      if (key.toLowerCase() !== "host") {
+        headers.set(key, value);
+      }
+    });
     headers.set("Clerk-Proxy-Url", "https://customsai.co/__clerk");
 
-    return NextResponse.rewrite(clerkUrl, {
-      request: { headers },
+    // Fetch from Clerk API
+    const response = await fetch(clerkUrl.toString(), {
+      method: request.method,
+      headers,
+      body: request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
+    });
+
+    // Return the response with CORS headers
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.set("Access-Control-Allow-Origin", "*");
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
     });
   }
 
