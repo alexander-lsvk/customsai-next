@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkProviderWithLocale } from "@/components/clerk-provider-with-locale";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,14 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
-        >
-          {children}
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
+      >
+        <ClerkProviderWithLocale>{children}</ClerkProviderWithLocale>
+      </body>
+    </html>
   );
 }

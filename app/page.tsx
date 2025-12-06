@@ -13,6 +13,62 @@ import {
   UserButton,
   useAuth,
 } from "@clerk/nextjs";
+import { useLanguage } from "@/components/clerk-provider-with-locale";
+
+const translations = {
+  en: {
+    brand: "Customs AI",
+    signIn: "Sign in",
+    signUp: "Sign up",
+    heroTitle1: "Your",
+    heroTitle2: "smart assistant",
+    heroTitle3: "for",
+    heroTitle4: "customs classification.",
+    heroSubtitle1: "AI-powered customs classification for ASEAN imports & exports.",
+    heroSubtitle2: "Get HS codes in seconds, not hours. Save time, manpower, and avoid fines.",
+    describeProduct: "Describe your product",
+    placeholder: "Brand names like 'Labubu' or 'iPhone' work, but add details for better accuracy (e.g. 'Labubu keychain, plastic, 5cm')",
+    classify: "Classify",
+    classifying: "Classifying...",
+    interpretedAs: "Interpreted as",
+    hsCode: "HS Code",
+    copy: "Copy",
+    copied: "Copied",
+    confidence: "confidence",
+    reasoning: "Reasoning",
+    edgeCases: "Edge Cases",
+    alternatives: "Alternatives",
+    disclaimer: "Disclaimer:",
+    disclaimerText: "This tool provides AI-generated HS code suggestions for reference only. Classifications may contain errors and should be verified with official customs authorities before use. Always consult a licensed customs broker for final classification decisions.",
+    copyright: "Customs AI. All rights reserved.",
+  },
+  th: {
+    brand: "Customs AI",
+    signIn: "เข้าสู่ระบบ",
+    signUp: "สมัครสมาชิก",
+    heroTitle1: "ผู้ช่วย",
+    heroTitle2: "อัจฉริยะ",
+    heroTitle3: "สำหรับ",
+    heroTitle4: "การจำแนกพิกัดศุลกากร",
+    heroSubtitle1: "ระบบจำแนกพิกัดศุลกากรด้วย AI สำหรับการนำเข้า-ส่งออกอาเซียน",
+    heroSubtitle2: "รับรหัส HS ในไม่กี่วินาที ประหยัดเวลา กำลังคน และหลีกเลี่ยงค่าปรับ",
+    describeProduct: "อธิบายสินค้าของคุณ",
+    placeholder: "ชื่อแบรนด์เช่น 'Labubu' หรือ 'iPhone' ใช้ได้ แต่เพิ่มรายละเอียดเพื่อความแม่นยำ (เช่น 'พวงกุญแจ Labubu พลาสติก 5 ซม.')",
+    classify: "จำแนก",
+    classifying: "กำลังจำแนก...",
+    interpretedAs: "ตีความเป็น",
+    hsCode: "รหัส HS",
+    copy: "คัดลอก",
+    copied: "คัดลอกแล้ว",
+    confidence: "ความมั่นใจ",
+    reasoning: "เหตุผล",
+    edgeCases: "กรณีพิเศษ",
+    alternatives: "ทางเลือกอื่น",
+    disclaimer: "ข้อจำกัดความรับผิดชอบ:",
+    disclaimerText: "เครื่องมือนี้ให้คำแนะนำรหัส HS ที่สร้างโดย AI เพื่อการอ้างอิงเท่านั้น การจำแนกอาจมีข้อผิดพลาดและควรตรวจสอบกับหน่วยงานศุลกากรอย่างเป็นทางการก่อนใช้งาน ควรปรึกษานายหน้าศุลกากรที่ได้รับอนุญาตสำหรับการตัดสินใจจำแนกขั้นสุดท้าย",
+    copyright: "Customs AI สงวนลิขสิทธิ์",
+  },
+};
 
 interface Alternative {
   hs_code: string;
@@ -120,6 +176,9 @@ export default function Home() {
   const [partialResult, setPartialResult] = useState<Partial<ClassificationResult> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { language, toggleLanguage } = useLanguage();
+
+  const t = translations[language];
 
   const copyToClipboard = async (code: string, id: string) => {
     try {
@@ -201,19 +260,26 @@ export default function Home() {
   return (
     <main className="gradient-bg min-h-screen flex flex-col items-center px-4 pt-28 pb-16">
       {/* Floating Navbar */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-6 py-3 rounded-full bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5">
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl px-6 py-3 rounded-full bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-semibold text-gray-900">Customs AI</span>
+          <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
           <div className="flex items-center gap-4">
+            <button
+              onClick={toggleLanguage}
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer font-medium"
+              title={language === "en" ? "Switch to Thai" : "เปลี่ยนเป็นภาษาอังกฤษ"}
+            >
+              {language === "en" ? "TH" : "EN"}
+            </button>
             <SignedOut>
               <SignInButton mode="modal">
                 <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
-                  Sign in
+                  {t.signIn}
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
-                  Sign up
+                  {t.signUp}
                 </button>
               </SignUpButton>
             </SignedOut>
@@ -228,14 +294,16 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
-            Your{" "}
-            <span className="italic font-thin" style={{ fontFamily: "'PP Editorial New', serif" }}>smart assistant</span>{" "}
-            for
+            {t.heroTitle1}{" "}
+            <span className="italic font-thin" style={{ fontFamily: "'PP Editorial New', serif" }}>{t.heroTitle2}</span>{" "}
+            {t.heroTitle3}
             <br />
-            customs classification.
+            {t.heroTitle4}
           </h1>
           <p className="text-gray-500 text-base md:text-lg">
-            AI-powered customs classification for ASEAN imports & exports
+            {t.heroSubtitle1}
+            <br />
+            {t.heroSubtitle2}
           </p>
         </div>
 
@@ -245,12 +313,12 @@ export default function Home() {
             {/* Input Section */}
             <div className="space-y-3">
               <label className="block text-sm font-semibold text-gray-700 text-left">
-                Describe your product
+                {t.describeProduct}
               </label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brand names like 'Labubu' or 'iPhone' work, but add details for better accuracy (e.g. 'Labubu keychain, plastic, 5cm')"
+                placeholder={t.placeholder}
                 className="glass-input min-h-[100px] text-gray-900 placeholder:text-gray-400 rounded-xl resize-none focus:ring-0 focus:outline-none transition-all duration-200 text-base"
               />
 
@@ -282,10 +350,10 @@ export default function Home() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      Classifying...
+                      {t.classifying}
                     </span>
                   ) : (
-                    "Classify"
+                    t.classify
                   )}
                 </Button>
               ) : (
@@ -294,7 +362,7 @@ export default function Home() {
                     disabled={!description.trim()}
                     className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Classify
+                    {t.classify}
                   </Button>
                 </SignUpButton>
               )}
@@ -324,7 +392,7 @@ export default function Home() {
                   {/* Interpreted Product */}
                   <div className="mb-4 pb-4 border-b border-gray-100">
                     <span className="text-gray-400 text-xs uppercase tracking-wider">
-                      Interpreted as
+                      {t.interpretedAs}
                     </span>
                     {displayResult?.interpreted_product ? (
                       <p className="text-gray-700 text-base font-medium mt-1">
@@ -336,7 +404,7 @@ export default function Home() {
                   </div>
 
                   <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">
-                    HS Code
+                    {t.hsCode}
                   </p>
                   {displayResult?.primary_hs_code_thailand ? (
                     <>
@@ -353,14 +421,14 @@ export default function Home() {
                             <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            <span className="text-emerald-600 text-xs">Copied</span>
+                            <span className="text-emerald-600 text-xs">{t.copied}</span>
                           </>
                         ) : (
                           <>
                             <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            <span className="text-gray-600 text-xs">Copy</span>
+                            <span className="text-gray-600 text-xs">{t.copy}</span>
                           </>
                         )}
                       </button>
@@ -388,7 +456,7 @@ export default function Home() {
                           }`}
                       />
                       <span className="text-gray-600 text-xs">
-                        {(displayResult.confidence * 100).toFixed(0)}% confidence
+                        {(displayResult.confidence * 100).toFixed(0)}% {t.confidence}
                       </span>
                     </div>
                   ) : (
@@ -401,7 +469,7 @@ export default function Home() {
               <Card className="glass-card rounded-2xl border-0">
                 <CardContent className="p-5">
                   <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">
-                    Reasoning
+                    {t.reasoning}
                   </p>
                   {displayResult?.reasoning ? (
                     <div className="text-gray-600 text-sm leading-relaxed prose prose-sm prose-gray max-w-none">
@@ -422,7 +490,7 @@ export default function Home() {
               <Card className="glass-card rounded-2xl border-0 border-l-4 border-l-amber-400">
                 <CardContent className="p-5">
                   <p className="text-amber-600 text-xs uppercase tracking-wider mb-3">
-                    Edge Cases
+                    {t.edgeCases}
                   </p>
                   {displayResult?.edge_cases && displayResult.edge_cases.length > 0 ? (
                     <div className="space-y-3">
@@ -474,7 +542,7 @@ export default function Home() {
               <Card className="glass-card rounded-2xl border-0">
                 <CardContent className="p-5">
                   <p className="text-gray-400 text-xs uppercase tracking-wider mb-3">
-                    Alternatives
+                    {t.alternatives}
                   </p>
                   {displayResult?.alternatives && displayResult.alternatives.length > 0 ? (
                     <div className="space-y-3">
@@ -538,16 +606,14 @@ export default function Home() {
         <Card className="glass-card rounded-2xl border-0 mt-10">
           <CardContent className="p-5">
             <p className="text-gray-500 text-xs text-center leading-relaxed">
-              <span className="font-semibold text-gray-600">Disclaimer:</span> This tool provides AI-generated HS code suggestions for reference only.
-              Classifications may contain errors and should be verified with official customs authorities before use.
-              Always consult a licensed customs broker for final classification decisions.
+              <span className="font-semibold text-gray-600">{t.disclaimer}</span> {t.disclaimerText}
             </p>
           </CardContent>
         </Card>
 
         {/* Footer */}
         <p className="text-center text-gray-400 text-xs mt-6">
-          &copy;2025 Customs AI. All rights reserved.
+          &copy;2025 {t.copyright}
           <br />
           <a href="mailto:team@customsai.co" className="hover:text-gray-600 transition-colors">team@customsai.co</a>
         </p>
