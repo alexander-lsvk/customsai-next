@@ -535,19 +535,21 @@ export default function Home() {
         })()}
 
         {/* Disclaimer */}
-        <div className="mt-10 p-4 rounded-xl bg-gray-50 border border-gray-100">
-          <p className="text-gray-500 text-xs text-center leading-relaxed">
-            <span className="font-semibold text-gray-600">Disclaimer:</span> This tool provides AI-generated HS code suggestions for reference only.
-            Classifications may contain errors and should be verified with official customs authorities before use.
-            Always consult a licensed customs broker for final classification decisions.
-          </p>
-        </div>
+        <Card className="glass-card rounded-2xl border-0 mt-10">
+          <CardContent className="p-5">
+            <p className="text-gray-500 text-xs text-center leading-relaxed">
+              <span className="font-semibold text-gray-600">Disclaimer:</span> This tool provides AI-generated HS code suggestions for reference only.
+              Classifications may contain errors and should be verified with official customs authorities before use.
+              Always consult a licensed customs broker for final classification decisions.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Footer */}
         <p className="text-center text-gray-400 text-xs mt-6">
-          Powered by Customs AI.
+          &copy;2025 Customs AI. All rights reserved.
           <br />
-          @2025 Customs AI. All rights reserved.
+          <a href="mailto:team@customsai.co" className="hover:text-gray-600 transition-colors">team@customsai.co</a>
         </p>
       </div>
     </main>
