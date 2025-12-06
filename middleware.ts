@@ -3,18 +3,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export default async function middleware(request: NextRequest) {
-  // Handle Clerk proxy requests
+  // Handle Clerk proxy requests - forward to Clerk's Frontend API
   if (request.nextUrl.pathname.startsWith("/__clerk")) {
-    const clerkUrl = new URL(
-      request.nextUrl.pathname.replace("/__clerk", ""),
-      "https://clerk.customsai.co"
-    );
+    const path = request.nextUrl.pathname.replace("/__clerk", "");
+    const clerkUrl = new URL(path, "https://frontend-api.clerk.dev");
     clerkUrl.search = request.nextUrl.search;
 
+    const headers = new Headers(request.headers);
+    headers.set("Clerk-Proxy-Url", "https://customsai.co/__clerk");
+
     return NextResponse.rewrite(clerkUrl, {
-      headers: {
-        "Clerk-Proxy-Url": "https://customsai.co/__clerk",
-      },
+      request: { headers },
     });
   }
 
