@@ -1,52 +1,52 @@
+import { NextResponse } from "next/server";
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 
-export default async function middleware(request: NextRequest) {
-  // Handle Clerk proxy requests - forward to Clerk's Frontend API
-  if (request.nextUrl.pathname.startsWith("/__clerk")) {
-    const path = request.nextUrl.pathname.replace("/__clerk", "");
-    const clerkUrl = new URL(path, "https://frontend-api.clerk.dev");
-    clerkUrl.search = request.nextUrl.search;
+function proxyMiddleware(req: NextRequest) {
+  if (req.nextUrl.pathname.match("__clerk")) {
+    const proxyHeaders = new Headers(req.headers);
+    proxyHeaders.set(
+      "Clerk-Proxy-Url",
+      process.env.NEXT_PUBLIC_CLERK_PROXY_URL || "https://customsai.co/__clerk"
+    );
+    proxyHeaders.set("Clerk-Secret-Key", process.env.CLERK_SECRET_KEY || "");
 
-    // Clone headers and add proxy header
-    const headers = new Headers();
-    request.headers.forEach((value, key) => {
-      // Skip host header as it should be the target host
-      if (key.toLowerCase() !== "host") {
-        headers.set(key, value);
-      }
-    });
-    headers.set("Clerk-Proxy-Url", "https://customsai.co/__clerk");
+    // Set X-Forwarded-For header
+    const forwardedFor = req.headers.get("X-Forwarded-For") || req.ip || "";
+    if (forwardedFor) {
+      proxyHeaders.set("X-Forwarded-For", forwardedFor);
+    }
 
-    // Fetch from Clerk API
-    const response = await fetch(clerkUrl.toString(), {
-      method: request.method,
-      headers,
-      body: request.method !== "GET" && request.method !== "HEAD" ? await request.text() : undefined,
-    });
+    const proxyUrl = new URL(req.url);
+    proxyUrl.host = "frontend-api.clerk.dev";
+    proxyUrl.port = "443";
+    proxyUrl.protocol = "https";
+    proxyUrl.pathname = proxyUrl.pathname.replace("/__clerk", "");
 
-    // Return the response with CORS headers
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set("Access-Control-Allow-Origin", "*");
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
+    return NextResponse.rewrite(proxyUrl, {
+      request: {
+        headers: proxyHeaders,
+      },
     });
   }
 
-  // Run Clerk middleware for all other requests
-  return clerkMiddleware()(request, {} as any);
+  return null;
+}
+
+const clerkHandler = clerkMiddleware();
+
+export default function middleware(req: NextRequest) {
+  const proxyResponse = proxyMiddleware(req);
+  if (proxyResponse) {
+    return proxyResponse;
+  }
+
+  return clerkHandler(req, {} as any);
 }
 
 export const config = {
   matcher: [
-    // Include __clerk proxy path
-    "/__clerk/(.*)",
-    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    "/(api|trpc|__clerk)(.*)",
   ],
 };
