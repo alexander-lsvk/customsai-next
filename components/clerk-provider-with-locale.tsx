@@ -10,6 +10,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   toggleLanguage: () => void;
+  isReady: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -32,15 +33,17 @@ export function ClerkProviderWithLocale({
 }: {
   children: React.ReactNode;
 }) {
+  // Always start with "th" to match server render
   const [language, setLanguageState] = useState<Language>("th");
-  const [mounted, setMounted] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // Read from localStorage on mount
     const savedLang = localStorage.getItem("language") as Language;
     if (savedLang && (savedLang === "en" || savedLang === "th")) {
       setLanguageState(savedLang);
     }
+    setIsReady(true);
   }, []);
 
   const setLanguage = (lang: Language) => {
@@ -53,20 +56,15 @@ export function ClerkProviderWithLocale({
     setLanguage(newLang);
   };
 
-  // Prevent hydration mismatch by rendering with default until mounted
-  if (!mounted) {
-    return (
-      <ClerkProvider localization={thTH}>
-        <LanguageContext.Provider value={{ language: "th", setLanguage, toggleLanguage }}>
-          {children}
-        </LanguageContext.Provider>
-      </ClerkProvider>
-    );
+  // Don't render children until we've read from localStorage
+  // This prevents hydration mismatch AND the language flash
+  if (!isReady) {
+    return null;
   }
 
   return (
     <ClerkProvider localization={localizationMap[language]} key={language}>
-      <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage }}>
+      <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, isReady }}>
         {children}
       </LanguageContext.Provider>
     </ClerkProvider>

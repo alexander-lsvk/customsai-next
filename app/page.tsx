@@ -18,6 +18,7 @@ import { useLanguage } from "@/components/clerk-provider-with-locale";
 const translations = {
   en: {
     brand: "Customs AI",
+    pricing: "Pricing",
     signIn: "Sign in",
     signUp: "Sign up",
     heroTitle1: "Your",
@@ -41,9 +42,12 @@ const translations = {
     disclaimer: "Disclaimer:",
     disclaimerText: "This tool provides AI-generated HS code suggestions for reference only. Classifications may contain errors and should be verified with official customs authorities before use. Always consult a licensed customs broker for final classification decisions.",
     copyright: "Customs AI. All rights reserved.",
+    getStarted: "Get Started",
+    noCreditCard: "No credit card required",
   },
   th: {
     brand: "Customs AI",
+    pricing: "ราคา",
     signIn: "เข้าสู่ระบบ",
     signUp: "สมัครสมาชิก",
     heroTitle1: "ผู้ช่วย",
@@ -67,6 +71,8 @@ const translations = {
     disclaimer: "ข้อจำกัดความรับผิดชอบ:",
     disclaimerText: "เครื่องมือนี้ให้คำแนะนำรหัส HS ที่สร้างโดย AI เพื่อการอ้างอิงเท่านั้น การจำแนกอาจมีข้อผิดพลาดและควรตรวจสอบกับหน่วยงานศุลกากรอย่างเป็นทางการก่อนใช้งาน ควรปรึกษานายหน้าศุลกากรที่ได้รับอนุญาตสำหรับการตัดสินใจจำแนกขั้นสุดท้าย",
     copyright: "Customs AI สงวนลิขสิทธิ์",
+    getStarted: "เริ่มต้นใช้งาน",
+    noCreditCard: "ไม่ต้องใช้บัตรเครดิต",
   },
 };
 
@@ -260,9 +266,12 @@ export default function Home() {
   return (
     <main className="gradient-bg min-h-screen flex flex-col items-center px-4 pt-28 pb-16">
       {/* Floating Navbar */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl px-6 py-3 rounded-full bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5">
-        <div className="flex items-center justify-between">
-          <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl h-14 px-6 rounded-full bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5">
+        <div className="flex items-center justify-between h-full">
+          <div className="flex items-center gap-6">
+            <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
+            <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.pricing}</a>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={toggleLanguage}
@@ -290,7 +299,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <div className="relative z-10 w-full max-w-2xl">
+      <div className="relative z-10 w-full max-w-3xl">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
@@ -305,6 +314,16 @@ export default function Home() {
             <br />
             {t.heroSubtitle2}
           </p>
+          <SignedOut>
+            <div className="mt-6">
+              <SignUpButton mode="modal">
+                <button className="px-6 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors cursor-pointer">
+                  {t.getStarted}
+                </button>
+              </SignUpButton>
+              <p className="text-gray-400 text-xs mt-2">{t.noCreditCard}</p>
+            </div>
+          </SignedOut>
         </div>
 
         {/* Card */}
@@ -359,8 +378,7 @@ export default function Home() {
               ) : (
                 <SignUpButton mode="modal">
                   <Button
-                    disabled={!description.trim()}
-                    className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer"
                   >
                     {t.classify}
                   </Button>

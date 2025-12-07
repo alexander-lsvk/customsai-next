@@ -38,7 +38,7 @@ export interface Subscription {
   user_id: string;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
-  plan: "free" | "starter" | "pro" | "business" | "enterprise";
+  plan: "free" | "growth" | "professional" | "business";
   status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
   current_period_start: string | null;
   current_period_end: string | null;
@@ -60,34 +60,49 @@ export interface Classification {
 // Plan configuration
 export const PLANS = {
   free: {
-    name: "Free",
+    name: "Free Trial",
     credits: 5,
     price: 0,
     features: ["5 free classifications", "Basic support"],
   },
-  starter: {
-    name: "Starter",
-    credits: 100,
-    price: 299, // THB
-    features: ["100 classifications/month", "Email support"],
+  growth: {
+    name: "Growth",
+    credits: 300,
+    price: 4990, // THB
+    features: [
+      "300 classifications/month",
+      "Smart reasoning for tricky cases",
+      "Full tariff display",
+      "Classification history & export",
+    ],
   },
-  pro: {
-    name: "Pro",
-    credits: 500,
-    price: 990, // THB
-    features: ["500 classifications/month", "Priority support", "Export history"],
+  professional: {
+    name: "Professional",
+    credits: 1000,
+    price: 9990, // THB
+    features: [
+      "1,000 classifications/month",
+      "Smart reasoning for tricky cases",
+      "Full tariff display",
+      "Classification history & export",
+      "Priority email support",
+      "Bulk classification processing",
+    ],
   },
   business: {
     name: "Business",
-    credits: 1500,
-    price: 2990, // THB
-    features: ["1,500 classifications/month", "API access", "Dedicated support"],
-  },
-  enterprise: {
-    name: "Enterprise",
-    credits: -1, // Unlimited
-    price: 9990, // THB
-    features: ["Unlimited classifications", "Custom integration", "SLA"],
+    credits: 3000,
+    price: 24990, // THB
+    features: [
+      "3,000 classifications/month",
+      "Smart reasoning for tricky cases",
+      "Full tariff display",
+      "Classification history & export",
+      "Priority email support",
+      "Bulk classification processing",
+      "API access",
+      "Dedicated account manager",
+    ],
   },
 } as const;
 
