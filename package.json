@@ -12,14 +12,17 @@
     "@clerk/localizations": "^3.29.1",
     "@clerk/nextjs": "^6.36.0",
     "@radix-ui/react-slot": "^1.2.4",
+    "@supabase/supabase-js": "^2.86.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^17.2.3",
     "lucide-react": "^0.555.0",
     "next": "16.0.7",
     "openai": "^6.10.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-markdown": "^10.1.0",
+    "svix": "^1.82.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

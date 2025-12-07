@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import OpenAI from "openai";
+import { checkCredits, useCredit, saveClassification } from "@/lib/credits";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -83,6 +85,16 @@ export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
 
   try {
+    // Get authenticated user
+    const { userId } = await auth();
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const body = await request.json();
     const { description } = body;
 
@@ -90,6 +102,20 @@ export async function POST(request: NextRequest) {
       return new Response(
         JSON.stringify({ error: "Description is required" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user has credits
+    const creditCheck = await checkCredits(userId);
+
+    if (!creditCheck.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: creditCheck.message,
+          credits_remaining: creditCheck.remaining,
+          plan: creditCheck.plan,
+        }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -149,6 +175,19 @@ export async function POST(request: NextRequest) {
                   primary_description: result.primary_description,
                   edge_cases: result.edge_cases || [],
                 };
+
+                // Use credit and save classification
+                await useCredit(userId);
+                await saveClassification(userId, {
+                  description,
+                  hs_code: result.primary_hs_code,
+                  hs_description: result.primary_description,
+                  confidence: result.confidence,
+                  reasoning: result.reasoning,
+                  alternatives: result.alternatives,
+                  edge_cases: result.edge_cases,
+                });
+
                 controller.enqueue(
                   encoder.encode(
                     `data: ${JSON.stringify({ done: true, result: response })}\n\n`
