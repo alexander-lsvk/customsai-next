@@ -378,7 +378,8 @@ export default function Home() {
               ) : (
                 <SignUpButton mode="modal">
                   <Button
-                    className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer"
+                    disabled={!description.trim()}
+                    className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {t.classify}
                   </Button>
