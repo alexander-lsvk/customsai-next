@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/clerk-provider-with-locale";
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
 import { Check } from "lucide-react";
 
 const translations = {
@@ -16,7 +17,11 @@ const translations = {
     classifications: "classifications",
     freeTrial: "7-day free trial",
     getStarted: "Start Free Trial",
+    subscribing: "Processing...",
     mostPopular: "Most Popular",
+    currentPlan: "Current Plan",
+    managePlan: "Manage Plan",
+    changePlan: "Change Plan",
     features: {
       classifications: "classifications/month",
       smartReasoning: "Smart reasoning for tricky cases",
@@ -50,11 +55,11 @@ const translations = {
       q3: "What payment methods do you accept?",
       a3: "We accept all major credit cards, bank transfers, and PromptPay for Thai customers.",
       q4: "Is there a free trial?",
-      a4: "Yes! All plans include a 7-day free trial with full access. No credit card required to start.",
+      a4: "Yes! All plans include a 7-day free trial. You'll need to enter payment details, but won't be charged until the trial ends.",
     },
     cta: {
       title: "Ready to streamline your customs workflow?",
-      subtitle: "Start your 7-day free trial. No credit card required.",
+      subtitle: "Start your 7-day free trial. Payment details required.",
       button: "Start Free Trial",
     },
     copyright: "Customs AI. All rights reserved.",
@@ -70,7 +75,11 @@ const translations = {
     classifications: "ครั้ง",
     freeTrial: "ทดลองใช้ฟรี 7 วัน",
     getStarted: "เริ่มทดลองใช้ฟรี",
+    subscribing: "กำลังดำเนินการ...",
     mostPopular: "ยอดนิยม",
+    currentPlan: "แผนปัจจุบัน",
+    managePlan: "จัดการแผน",
+    changePlan: "เปลี่ยนแผน",
     features: {
       classifications: "การจำแนก/เดือน",
       smartReasoning: "อธิบายเหตุผลสำหรับกรณีซับซ้อน",
@@ -104,11 +113,11 @@ const translations = {
       q3: "รับชำระเงินด้วยวิธีใดบ้าง?",
       a3: "เรารับบัตรเครดิตหลักทุกประเภท โอนเงินผ่านธนาคาร และ PromptPay สำหรับลูกค้าไทย",
       q4: "มีทดลองใช้ฟรีหรือไม่?",
-      a4: "มี! ทุกแผนรวมทดลองใช้ฟรี 7 วันพร้อมสิทธิ์เต็มรูปแบบ ไม่ต้องใช้บัตรเครดิตเพื่อเริ่มต้น",
+      a4: "มี! ทุกแผนรวมทดลองใช้ฟรี 7 วัน ต้องกรอกข้อมูลบัตรเครดิต แต่จะไม่เรียกเก็บเงินจนกว่าจะหมดช่วงทดลอง",
     },
     cta: {
       title: "พร้อมที่จะปรับปรุงขั้นตอนการทำงานศุลกากรของคุณหรือยัง?",
-      subtitle: "เริ่มทดลองใช้ฟรี 7 วัน ไม่ต้องใช้บัตรเครดิต",
+      subtitle: "เริ่มทดลองใช้ฟรี 7 วัน ต้องกรอกข้อมูลการชำระเงิน",
       button: "เริ่มทดลองใช้ฟรี",
     },
     copyright: "Customs AI. สงวนลิขสิทธิ์",
@@ -160,17 +169,92 @@ const plans = [
 
 export default function PricingPage() {
   const { language, toggleLanguage } = useLanguage();
+  const { isSignedIn } = useAuth();
   const t = translations[language];
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+  const [isPlanStatusLoaded, setIsPlanStatusLoaded] = useState(false);
+
+  useEffect(() => {
+    // isSignedIn is undefined while Clerk is loading, true/false when determined
+    if (isSignedIn === undefined) {
+      return; // Still loading auth state
+    }
+
+    if (isSignedIn) {
+      fetch("/api/user/credits")
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Fetched credits data:", data);
+          if (data.plan && data.plan !== "free") {
+            setCurrentPlan(data.plan);
+            console.log("Set currentPlan to:", data.plan);
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching credits:", err);
+        })
+        .finally(() => {
+          setIsPlanStatusLoaded(true);
+        });
+    } else {
+      // Not signed in, no need to fetch plan
+      setIsPlanStatusLoaded(true);
+    }
+  }, [isSignedIn]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat(language === "th" ? "th-TH" : "en-US").format(price);
   };
 
+  const handleSubscribe = async (planId: string) => {
+    if (!isSignedIn) return;
+
+    setLoadingPlan(planId);
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
+  const handleManagePlan = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const response = await fetch("/api/stripe/portal", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Portal error:", error);
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
+
   return (
-    <main className="gradient-bg min-h-screen flex flex-col items-center px-4 pt-28 pb-16">
-      {/* Floating Navbar */}
-      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl h-14 px-6 rounded-full bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5">
-        <div className="flex items-center justify-between h-full">
+    <main className="gradient-bg min-h-screen flex flex-col items-center px-4 pb-16">
+      {/* Navbar */}
+      <nav className="w-full h-14 mb-16">
+        <div className="flex items-center justify-between h-full max-w-3xl mx-auto">
           <div className="flex items-center gap-6">
             <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
             <a href="/pricing" className="text-sm font-medium text-gray-900">{t.pricing}</a>
@@ -216,6 +300,7 @@ export default function PricingPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full mb-20">
         {plans.map((plan) => {
           const planTranslation = t.plans[plan.id as keyof typeof t.plans];
+          const isLoading = loadingPlan === plan.id;
           return (
             <div
               key={plan.id}
@@ -264,16 +349,81 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <button
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                className={`w-full py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                  plan.popular
-                    ? "bg-gray-900 text-white hover:bg-gray-800"
-                    : "bg-gray-100 text-gray-900 hover:bg-gray-200"
-                }`}
-              >
-                {t.getStarted}
-              </button>
+              {/* Always show button - spinner while loading, then proper text */}
+              {!isPlanStatusLoaded ? (
+                <button
+                  disabled
+                  className={`w-full py-2.5 rounded-full text-sm font-medium cursor-not-allowed flex items-center justify-center ${
+                    plan.popular
+                      ? "bg-gray-900 text-white"
+                      : "bg-gray-100 text-gray-900"
+                  }`}
+                >
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </button>
+              ) : isSignedIn && currentPlan === plan.id ? (
+                <button
+                  onClick={handleManagePlan}
+                  disabled={isLoadingPortal}
+                  className="w-full py-2.5 rounded-full text-sm font-medium bg-green-100 text-green-700 border-2 border-green-500 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isLoadingPortal ? (
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : t.managePlan}
+                </button>
+              ) : isSignedIn && currentPlan ? (
+                <button
+                  onClick={handleManagePlan}
+                  disabled={isLoadingPortal}
+                  className={`w-full py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center ${
+                    plan.popular
+                      ? "bg-gray-900 text-white hover:bg-gray-800"
+                      : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                  }`}
+                >
+                  {isLoadingPortal ? (
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : t.changePlan}
+                </button>
+              ) : isSignedIn ? (
+                <button
+                  onClick={() => handleSubscribe(plan.id)}
+                  disabled={loadingPlan === plan.id}
+                  className={`w-full py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center ${
+                    plan.popular
+                      ? "bg-gray-900 text-white hover:bg-gray-800"
+                      : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                  }`}
+                >
+                  {loadingPlan === plan.id ? (
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : t.getStarted}
+                </button>
+              ) : (
+                <SignUpButton mode="modal">
+                  <button
+                    className={`w-full py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
+                      plan.popular
+                        ? "bg-gray-900 text-white hover:bg-gray-800"
+                        : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                    }`}
+                  >
+                    {t.getStarted}
+                  </button>
+                </SignUpButton>
+              )}
             </div>
           );
         })}
@@ -307,12 +457,49 @@ export default function PricingPage() {
         <p className="text-gray-400 mb-6">
           {t.cta.subtitle}
         </p>
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors cursor-pointer"
-        >
-          {t.cta.button}
-        </button>
+        {!isPlanStatusLoaded ? (
+          <button
+            disabled
+            className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium cursor-not-allowed min-w-[160px] flex items-center justify-center mx-auto"
+          >
+            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </button>
+        ) : isSignedIn && currentPlan ? (
+          <button
+            onClick={handleManagePlan}
+            disabled={isLoadingPortal}
+            className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors cursor-pointer disabled:cursor-not-allowed min-w-[160px] flex items-center justify-center mx-auto"
+          >
+            {isLoadingPortal ? (
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : t.managePlan}
+          </button>
+        ) : isSignedIn ? (
+          <button
+            onClick={() => handleSubscribe("professional")}
+            disabled={loadingPlan === "professional"}
+            className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors cursor-pointer disabled:cursor-not-allowed min-w-[160px] flex items-center justify-center mx-auto"
+          >
+            {loadingPlan === "professional" ? (
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : t.cta.button}
+          </button>
+        ) : (
+          <SignUpButton mode="modal">
+            <button className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors cursor-pointer">
+              {t.cta.button}
+            </button>
+          </SignUpButton>
+        )}
       </div>
 
       {/* Footer */}

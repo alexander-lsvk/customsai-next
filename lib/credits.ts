@@ -20,21 +20,32 @@ export async function getUserByClerkId(clerkId: string) {
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  // First get the user
+  const { data: user, error: userError } = await supabaseAdmin
     .from("users")
-    .select(`
-      *,
-      subscriptions (*)
-    `)
+    .select("*")
     .eq("clerk_id", clerkId)
     .single();
 
-  if (error) {
-    console.error("Error fetching user:", error);
+  if (userError || !user) {
+    console.error("Error fetching user:", userError);
     return null;
   }
 
-  return data;
+  // Then get subscription separately
+  const { data: subscriptions, error: subError } = await supabaseAdmin
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id);
+
+  if (subError) {
+    console.error("Error fetching subscription:", subError);
+  }
+
+  return {
+    ...user,
+    subscriptions: subscriptions || [],
+  };
 }
 
 // Check if user can classify (has credits)
@@ -152,11 +163,14 @@ export async function getUserCredits(clerkId: string): Promise<UserCredits | nul
   }
 
   const subscription = user.subscriptions?.[0];
+  const plan = subscription?.plan || "free";
+
+  console.log(`[getUserCredits] clerkId: ${clerkId}, subscription:`, subscription, `plan: ${plan}`);
 
   return {
     credits_remaining: user.credits_remaining,
     credits_used: user.credits_used,
-    plan: subscription?.plan || "free",
+    plan,
   };
 }
 
