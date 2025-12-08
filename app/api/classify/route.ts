@@ -2,60 +2,69 @@ import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import OpenAI from "openai";
 import { checkCredits, useCredit, saveClassification } from "@/lib/credits";
+import {
+  searchHSCodesVector,
+  formatVectorResultsForPrompt,
+  getHSCodesByHeading,
+} from "@/lib/vector-search";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are an expert in ASEAN Harmonized Tariff Nomenclature (AHTN) and HS Code classification. Your task is to analyze product descriptions and provide accurate HS codes for ASEAN customs.
+// Classification mode: "chapter" (recommended), "vector", or "llm-only"
+type ClassificationMode = "chapter" | "vector" | "llm-only";
+const CLASSIFICATION_MODE: ClassificationMode = "chapter";
+
+const SYSTEM_PROMPT_VECTOR = `You are an expert in ASEAN Harmonized Tariff Nomenclature (AHTN) 2022 and Thailand Customs Tariff. Your task is to analyze product descriptions and provide accurate HS codes based on the AHTN 2022 nomenclature.
+
+CRITICAL - USE ONLY VALID THAILAND HS CODES:
+You will be provided with a list of VALID Thailand HS codes that match the product description. You MUST select your classification from these codes ONLY.
+- DO NOT invent or guess HS codes - use ONLY codes from the provided list
+- The provided codes are the ONLY valid 8-digit Thailand AHTN 2022 codes
+- If none of the provided codes seem to fit, choose the closest match and explain why
+
+CRITICAL - CHOOSE THE MOST SPECIFIC CODE:
+- ALWAYS prefer a SPECIFIC named code over a generic "Other" code
+- If a code description matches exactly what the product IS, use that code
+- Codes with "Other" in the description are catch-all codes - only use them if NO specific code matches the product
+
+WEB SEARCH FOR PRODUCT IDENTIFICATION:
+- Use web search to identify what the product actually is (especially for brand names)
+- Use web search to understand the product's composition and characteristics
+- BUT for the final HS code, you MUST select from the provided valid codes list
 
 When a user provides a product description, you must:
 
-1. **Interpret the product**: If it's a brand name, slang, or unfamiliar term, USE WEB SEARCH to identify what it is
-   - ALWAYS search the web for brand names or terms you're not 100% certain about
-   - Use your search results to determine the actual product category
+1. **Interpret the product**: If it's a brand name, trade name, or unfamiliar term, USE WEB SEARCH to identify what it is
+   - ALWAYS search the web for brand names, chemical trade names, or terms you're not 100% certain about
+   - Use your search results to determine the actual product category and composition
    - If still unsure after searching, classify based on the most common form of that product
-2. **Extract ALL attributes from the description**: Look for any specified characteristics:
-   - Size/dimensions (mini, small, large, measurements)
-   - Form factor (keychain, pendant, charm, accessory, full-size, plush, etc.)
-   - Material composition
-   - Intended use/function
-   - Condition (new, used, etc.)
+2. **Extract ALL attributes from the description**: Look for any specified characteristics relevant to HS classification (material, form, function, size, state, etc.)
 3. **Classify based on EXACTLY what was described**:
    - The primary HS code MUST reflect ALL attributes mentioned in the description
-   - If the user specifies a form factor, size, material, or purpose, that information MUST change the classification
-   - A product with additional attributes WILL classify differently than the base product
+   - Apply General Rules of Interpretation (GRI) correctly
+   - Consider the product's essential character when classifying composite goods
 4. **Explain your reasoning**: Reference the relevant HS chapter, heading, and classification rules
 5. **Identify edge cases** (provide 3-5): Variations NOT already specified in the description that would change the classification
-   - Consider: different materials, sizes, intended uses, forms, conditions
 6. **Provide alternatives** (provide 3-5): Other possible HS codes if certain assumptions differ
    - Include codes for related product categories, different interpretations, or common misclassifications
 
-CRITICAL FORM FACTOR RULES:
-When a form factor is explicitly specified, it fundamentally changes the classification:
-- "X keychain" / "X charm" / "X pendant" → Classify as the accessory/keychain article, NOT as X
-  - Apply GRI 3(b): The keychain ring/attachment gives it the essential character of an accessory
-  - Consider: 7117 (imitation jewellery), 7326 (metal articles), 3926 (plastic articles) based on material
-- "X plush" / "X stuffed" → Classify as stuffed toy (9503.00.21 or similar)
-- "X figurine" / "X figure" / "X statue" → Classify based on material and size (Chapter 39, 69, 83, 95)
-- "mini X" / "small X" → Size may affect classification (e.g., miniature ornaments vs full-size items)
-
-The form factor modifier is NOT just a description - it determines the PRIMARY classification.
-Example: "toy keychain" is a KEYCHAIN (accessory), not a toy. The toy aspect is secondary.
-
 CLASSIFICATION PRINCIPLES:
-- Form factor modifiers CHANGE the base classification - they are not optional details
-- Apply GRI (General Rules of Interpretation) correctly, especially GRI 3(b) for composite goods
-- The item's primary function as used (keychain → holding keys, pendant → worn as jewelry) determines classification
+- Apply GRI (General Rules of Interpretation) in order: GRI 1, then GRI 2, then GRI 3, etc.
+- Classify by actual product characteristics, not by brand or trade name
+- For composite goods, determine essential character per GRI 3(b)
 - Edge cases should only cover UNSPECIFIED variations
 - Do NOT list an edge case for something already specified in the description
 
 IMPORTANT:
-- Use ASEAN Harmonized Tariff Nomenclature (AHTN) codes
+- Use AHTN 2022 (ASEAN Harmonized Tariff Nomenclature 2022) codes - NOT older versions
+- For Thailand: use 8-digit codes in format XXXX.XX.XX
 - Be specific about what conditions would trigger each alternative code
 - Always explain WHY a particular code applies based on HS classification rules
 - If you encounter an unknown brand name or term, ALWAYS use web search to look it up before classifying
 - NEVER return 0% confidence or say you cannot classify - always make your best determination based on available information
+- When searching, specifically look for "HS 2022" or "AHTN 2022" classification codes
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -63,10 +72,66 @@ Respond ONLY with valid JSON in this exact format:
   "primary_hs_code": "XXXX.XX.XX",
   "primary_description": "Official HS code description",
   "confidence": 0.XX,
-  "reasoning": "Detailed explanation of why this code was chosen, referencing HS chapters and rules",
+  "reasoning": "Brief explanation (3-5 sentences max) of why this code was chosen",
   "edge_cases": [
     {
-      "condition": "Description of when this applies (e.g., 'If the item is a keychain/small accessory under 10cm')",
+      "condition": "Description of when this alternative classification applies",
+      "hs_code": "XXXX.XX.XX",
+      "description": "Official HS code description",
+      "explanation": "Why this code applies under this condition"
+    }
+  ],
+  "alternatives": [
+    {
+      "hs_code": "XXXX.XX.XX",
+      "description": "Official HS code description",
+      "reason": "When/why this alternative might apply"
+    }
+  ]
+}`;
+
+// LLM-only system prompt (no vector search constraints)
+const SYSTEM_PROMPT_LLM = `You are an expert in ASEAN Harmonized Tariff Nomenclature (AHTN) 2022 and Thailand Customs Tariff. Your task is to analyze product descriptions and provide accurate HS codes based on the AHTN 2022 nomenclature.
+
+When a user provides a product description, you must:
+
+1. **Interpret the product**: If it's a brand name, trade name, or unfamiliar term, USE WEB SEARCH to identify what it is
+   - ALWAYS search the web for brand names, chemical trade names, or terms you're not 100% certain about
+   - Use your search results to determine the actual product category and composition
+   - If still unsure after searching, classify based on the most common form of that product
+2. **Extract ALL attributes from the description**: Look for any specified characteristics relevant to HS classification (material, form, function, size, state, etc.)
+3. **Classify based on EXACTLY what was described**:
+   - The primary HS code MUST reflect ALL attributes mentioned in the description
+   - Apply General Rules of Interpretation (GRI) correctly
+   - Consider the product's essential character when classifying composite goods
+4. **Explain your reasoning**: Reference the relevant HS chapter, heading, and classification rules
+5. **Identify edge cases** (provide 3-5): Variations NOT already specified in the description that would change the classification
+6. **Provide alternatives** (provide 3-5): Other possible HS codes if certain assumptions differ
+
+CLASSIFICATION PRINCIPLES:
+- Apply GRI (General Rules of Interpretation) in order: GRI 1, then GRI 2, then GRI 3, etc.
+- Classify by actual product characteristics, not by brand or trade name
+- For composite goods, determine essential character per GRI 3(b)
+- Edge cases should only cover UNSPECIFIED variations
+
+IMPORTANT:
+- Use AHTN 2022 (ASEAN Harmonized Tariff Nomenclature 2022) codes - NOT older versions
+- For Thailand: use 8-digit codes in format XXXX.XX.XX
+- Always explain WHY a particular code applies based on HS classification rules
+- If you encounter an unknown brand name or term, ALWAYS use web search to look it up before classifying
+- NEVER return 0% confidence or say you cannot classify - always make your best determination
+- When searching, specifically look for "AHTN 2022" classification codes
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "interpreted_product": "What this product actually is, including all attributes from the description",
+  "primary_hs_code": "XXXX.XX.XX",
+  "primary_description": "Official HS code description",
+  "confidence": 0.XX,
+  "reasoning": "Brief explanation (3-5 sentences max) of why this code was chosen",
+  "edge_cases": [
+    {
+      "condition": "Description of when this applies",
       "hs_code": "XXXX.XX.XX",
       "description": "Official HS code description",
       "explanation": "Why this code applies under this condition"
@@ -87,13 +152,16 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const { userId } = await auth();
+    const testMode = process.env.NODE_ENV === "development" && !userId;
 
-    if (!userId) {
+    if (!userId && !testMode) {
       return new Response(
         JSON.stringify({ error: "Authentication required" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const effectiveUserId = userId || "test-user";
 
     const body = await request.json();
     const { description } = body;
@@ -105,8 +173,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has credits
-    const creditCheck = await checkCredits(userId);
+    // Check if user has credits (skip in test mode)
+    const creditCheck = testMode
+      ? { allowed: true, remaining: 999, plan: "test", message: "" }
+      : await checkCredits(effectiveUserId);
 
     if (!creditCheck.allowed) {
       return new Response(
@@ -126,17 +196,163 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stream = await openai.responses.create({
-      model: "gpt-4o",
-      instructions: SYSTEM_PROMPT,
-      input: `Classify the following product for ASEAN customs:\n\nProduct: ${description}\n\nProvide the HS code classification with reasoning, edge cases, and alternatives. Respond ONLY with valid JSON, no other text.`,
-      tools: [
-        {
-          type: "web_search_preview",
-        },
-      ],
-      stream: true,
-    });
+    let stream;
+
+    if (CLASSIFICATION_MODE === "chapter") {
+      // === CHAPTER-BASED MODE (recommended) ===
+      // STEP 1: LLM identifies product and returns 4-digit HS heading
+      console.log("Using chapter-based mode for classification");
+      const identifyResponse = await openai.responses.create({
+        model: "gpt-5.1",
+        input: `Identify what this product is and determine the correct 4-digit HS heading: "${description}"
+
+If it's a brand name or unfamiliar term, search the web to find out what it actually is.
+
+Return ONLY a JSON object:
+{
+  "product_name": "What this product actually is",
+  "hs_heading": "XXXX",
+  "heading_description": "Description of this HS heading",
+  "reasoning": "Why this heading"
+}
+
+Return ONLY valid JSON, no other text.`,
+        tools: [{ type: "web_search_preview" }],
+        reasoning: { effort: "none" },
+      });
+
+      // Parse the heading
+      let hsHeading = "";
+      let productIdentification = "";
+      try {
+        const identifyText = identifyResponse.output_text || "";
+        console.log("AI identification response:", identifyText);
+        const jsonMatch = identifyText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const identified = JSON.parse(jsonMatch[0]);
+          hsHeading = identified.hs_heading?.replace(/\./g, "") || "";
+          productIdentification = identified.product_name || description;
+          console.log("Identified heading:", hsHeading, "Product:", productIdentification);
+        }
+      } catch {
+        console.log("Failed to parse identification");
+      }
+
+      if (!hsHeading || hsHeading.length !== 4) {
+        // Fallback to LLM-only if heading identification fails
+        console.log("Heading identification failed, falling back to LLM-only");
+        stream = await openai.responses.create({
+          model: "gpt-5.1",
+          instructions: SYSTEM_PROMPT_LLM,
+          input: `Classify the following product for ASEAN/Thailand customs using HS 2022 codes:
+
+Product: ${description}
+
+Respond ONLY with valid JSON, no other text.`,
+          tools: [{ type: "web_search_preview" }],
+          stream: true,
+          reasoning: { effort: "none" },
+        });
+      } else {
+        // STEP 2: Get all codes from this heading
+        const headingCodes = await getHSCodesByHeading(hsHeading);
+        console.log(`Found ${headingCodes.length} codes for heading ${hsHeading}`);
+        const codesContext = formatVectorResultsForPrompt(headingCodes);
+
+        // STEP 3: LLM picks the right code from valid options
+        stream = await openai.responses.create({
+          model: "gpt-5.1",
+          instructions: SYSTEM_PROMPT_VECTOR,
+          input: `Classify this product for Thailand customs.
+
+Product: ${description}
+Identified as: ${productIdentification}
+
+VALID THAILAND HS CODES for heading ${hsHeading} (you MUST choose from these):
+${codesContext}
+
+Pick the most specific code that matches this product. Respond ONLY with valid JSON.`,
+          tools: [{ type: "web_search_preview" }],
+          stream: true,
+          reasoning: { effort: "none" },
+        });
+      }
+    } else if (CLASSIFICATION_MODE === "vector") {
+      // === VECTOR SEARCH MODE ===
+      console.log("Using vector search mode for classification");
+      const identifyResponse = await openai.responses.create({
+        model: "gpt-5.1",
+        input: `Identify what this product is: "${description}"
+
+If it's a brand name or unfamiliar term, search the web to find out what it actually is.
+
+Return ONLY a JSON object with these fields:
+{
+  "product_name": "The actual product name (not brand)",
+  "category": "General category",
+  "hs_category": "The HS tariff category description",
+  "search_terms": ["term1", "term2", "term3", "term4", "term5"]
+}
+
+Return ONLY valid JSON, no other text.`,
+        tools: [{ type: "web_search_preview" }],
+        reasoning: { effort: "none" },
+      });
+
+      let searchTerms: string[] = [description];
+      try {
+        const identifyText = identifyResponse.output_text || "";
+        console.log("AI identification response:", identifyText);
+        const jsonMatch = identifyText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const identified = JSON.parse(jsonMatch[0]);
+          if (identified.search_terms && Array.isArray(identified.search_terms)) {
+            searchTerms = [...identified.search_terms];
+            if (identified.hs_category) {
+              searchTerms.unshift(identified.hs_category);
+            }
+          }
+        }
+      } catch {
+        console.log("Failed to parse identification, using original description");
+      }
+
+      const searchQuery = searchTerms.join(" ");
+      const relevantCodes = await searchHSCodesVector(searchQuery, 50);
+      console.log("Found codes:", relevantCodes.length);
+      const codesContext = formatVectorResultsForPrompt(relevantCodes);
+
+      stream = await openai.responses.create({
+        model: "gpt-5.1",
+        instructions: SYSTEM_PROMPT_VECTOR,
+        input: `Classify the following product for ASEAN/Thailand customs using HS 2022 codes:
+
+Product: ${description}
+
+VALID THAILAND HS CODES (you MUST choose from these):
+${codesContext}
+
+Respond ONLY with valid JSON, no other text.`,
+        tools: [{ type: "web_search_preview" }],
+        stream: true,
+        reasoning: { effort: "none" },
+      });
+    } else {
+      // === LLM-ONLY MODE ===
+      console.log("Using LLM-only mode for classification");
+      stream = await openai.responses.create({
+        model: "gpt-5.1",
+        instructions: SYSTEM_PROMPT_LLM,
+        input: `Classify the following product for ASEAN/Thailand customs using HS 2022 codes:
+
+Product: ${description}
+
+Respond ONLY with valid JSON, no other text.`,
+        tools: [{ type: "web_search_preview" }],
+        stream: true,
+        reasoning: { effort: "none" },
+      });
+    }
 
     const readableStream = new ReadableStream({
       async start(controller) {
@@ -176,27 +392,34 @@ export async function POST(request: NextRequest) {
                   edge_cases: result.edge_cases || [],
                 };
 
-                // Use credit and save classification
-                await useCredit(userId);
-                await saveClassification(userId, {
-                  description,
-                  hs_code: result.primary_hs_code,
-                  hs_description: result.primary_description,
-                  confidence: result.confidence,
-                  reasoning: result.reasoning,
-                  alternatives: result.alternatives,
-                  edge_cases: result.edge_cases,
-                });
+                // Use credit and save classification (skip in test mode)
+                if (!testMode) {
+                  await useCredit(effectiveUserId);
+                  await saveClassification(effectiveUserId, {
+                    description,
+                    hs_code: result.primary_hs_code,
+                    hs_description: result.primary_description,
+                    confidence: result.confidence,
+                    reasoning: result.reasoning,
+                    alternatives: result.alternatives,
+                    edge_cases: result.edge_cases,
+                  });
+                }
 
                 controller.enqueue(
                   encoder.encode(
-                    `data: ${JSON.stringify({ done: true, result: response })}\n\n`
+                    `data: ${JSON.stringify({
+                      done: true,
+                      result: response,
+                    })}\n\n`
                   )
                 );
               } catch {
                 controller.enqueue(
                   encoder.encode(
-                    `data: ${JSON.stringify({ error: "Failed to parse response" })}\n\n`
+                    `data: ${JSON.stringify({
+                      error: "Failed to parse response",
+                    })}\n\n`
                   )
                 );
               }
