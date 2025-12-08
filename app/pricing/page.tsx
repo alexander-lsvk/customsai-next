@@ -279,7 +279,7 @@ export default function PricingPage() {
                   {t.signIn}
                 </button>
               </SignInButton>
-              <SignUpButton mode="modal">
+              <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
                   {t.signUp}
                 </button>
@@ -418,7 +418,7 @@ export default function PricingPage() {
                   ) : t.getStarted}
                 </button>
               ) : (
-                <SignUpButton mode="modal">
+                <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                   <button
                     className={`w-full py-2.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                       plan.popular
@@ -500,7 +500,7 @@ export default function PricingPage() {
             ) : t.cta.button}
           </button>
         ) : (
-          <SignUpButton mode="modal">
+          <SignUpButton mode="modal" unsafeMetadata={{ language }}>
             <button className="px-8 py-3 bg-white text-gray-900 rounded-full font-medium hover:bg-gray-100 transition-colors cursor-pointer">
               {t.cta.button}
             </button>

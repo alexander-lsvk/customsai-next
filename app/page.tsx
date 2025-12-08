@@ -355,7 +355,7 @@ export default function Home() {
                   {t.signIn}
                 </button>
               </SignInButton>
-              <SignUpButton mode="modal">
+              <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
                   {t.signUp}
                 </button>
@@ -385,7 +385,7 @@ export default function Home() {
           </p>
           <SignedOut>
             <div className="mt-6">
-              <SignUpButton mode="modal">
+              <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="px-6 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors cursor-pointer">
                   {t.getStarted}
                 </button>
@@ -458,7 +458,7 @@ export default function Home() {
                   )}
                 </Button>
               ) : (
-                <SignUpButton mode="modal">
+                <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                   <Button
                     disabled={!description.trim()}
                     className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"

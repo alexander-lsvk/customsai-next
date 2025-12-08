@@ -2,6 +2,7 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { supabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import { resend, getWelcomeEmailHtml, getWelcomeEmailSubject } from "@/lib/resend";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -90,6 +91,27 @@ export async function POST(req: Request) {
       if (subError) {
         console.error("Error creating subscription:", subError);
         return new Response("Error creating subscription", { status: 500 });
+      }
+
+      // Send welcome email
+      // Detect language from user's locale or default to Thai
+      const userLocale = evt.data.unsafe_metadata?.language as string | undefined;
+      const language = userLocale === "en" ? "en" : "th";
+
+      if (resend) {
+        try {
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "Customs AI <onboarding@resend.dev>";
+          await resend.emails.send({
+            from: fromEmail,
+            to: email,
+            subject: getWelcomeEmailSubject(language),
+            html: getWelcomeEmailHtml(name, language),
+          });
+          console.log("Welcome email sent to:", email);
+        } catch (emailError) {
+          // Don't fail the webhook if email fails
+          console.error("Error sending welcome email:", emailError);
+        }
       }
 
       console.log("Created user with free subscription:", email);
