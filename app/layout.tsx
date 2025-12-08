@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProviderWithLocale } from "@/components/clerk-provider-with-locale";
 import { MixpanelProvider } from "@/components/mixpanel-provider";
 import { FacebookPixel } from "@/components/facebook-pixel";
+import { FirebaseAnalytics } from "@/components/firebase-analytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -179,6 +180,7 @@ export default function RootLayout({
       >
         <ClerkProviderWithLocale>
           <FacebookPixel />
+          <FirebaseAnalytics />
           <MixpanelProvider>{children}</MixpanelProvider>
         </ClerkProviderWithLocale>
       </body>

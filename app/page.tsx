@@ -14,6 +14,7 @@ import {
   useAuth,
 } from "@clerk/nextjs";
 import { useLanguage } from "@/components/clerk-provider-with-locale";
+import { ClassificationChat } from "@/components/classification-chat";
 
 const translations = {
   en: {
@@ -809,6 +810,21 @@ export default function Home() {
             </a>
           </div>
         </div>
+      )}
+
+      {/* Classification Chat - appears after result */}
+      {result && (
+        <ClassificationChat
+          context={{
+            product_description: description,
+            hs_code: result.primary_hs_code_thailand,
+            hs_description: result.primary_description || "",
+            confidence: result.confidence,
+            reasoning: result.reasoning,
+            alternatives: result.alternatives,
+            edge_cases: result.edge_cases,
+          }}
+        />
       )}
     </main>
   );
