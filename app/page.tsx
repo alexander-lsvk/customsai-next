@@ -743,11 +743,6 @@ export default function Home() {
 
             {/* Header */}
             <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
               <h2 className="text-xl font-semibold text-gray-900">{t.upgradeTitle}</h2>
               <p className="text-gray-500 text-sm mt-1">{t.upgradeSubtitle}</p>
             </div>
