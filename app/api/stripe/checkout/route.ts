@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { plan } = body as { plan: StripePlanType };
+    const { plan, locale } = body as { plan: StripePlanType; locale?: string };
 
     if (!plan || !STRIPE_PLANS[plan]) {
       return NextResponse.json(
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       customer_email: stripeCustomerId ? undefined : undefined,
       mode: "subscription",
       payment_method_types: ["card"],
+      locale: locale === "th" ? "th" : "auto",
       line_items: [
         {
           price: planConfig.priceId,

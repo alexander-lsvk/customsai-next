@@ -244,7 +244,7 @@ export default function Home() {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, locale: language }),
       });
       const data = await response.json();
       if (data.url) {
