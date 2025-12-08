@@ -11,6 +11,8 @@ const translations = {
     signIn: "Sign in",
     signUp: "Sign up",
     pricing: "Pricing",
+    about: "About",
+    history: "History",
     heroTitle: "Simple, transparent pricing",
     heroSubtitle: "Choose the plan that fits your business. All plans include our AI-powered HS code classification.",
     monthly: "/month",
@@ -69,6 +71,8 @@ const translations = {
     signIn: "เข้าสู่ระบบ",
     signUp: "สมัครสมาชิก",
     pricing: "ราคา",
+    about: "เกี่ยวกับ",
+    history: "ประวัติ",
     heroTitle: "ราคาที่เรียบง่ายและโปร่งใส",
     heroSubtitle: "เลือกแผนที่เหมาะกับธุรกิจของคุณ ทุกแผนรวม AI จำแนกพิกัดศุลกากร",
     monthly: "/เดือน",
@@ -258,6 +262,8 @@ export default function PricingPage() {
           <div className="flex items-center gap-6">
             <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
             <a href="/pricing" className="text-sm font-medium text-gray-900">{t.pricing}</a>
+            <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            <a href="/about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.about}</a>
           </div>
           <div className="flex items-center gap-4">
             <button

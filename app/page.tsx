@@ -19,6 +19,8 @@ const translations = {
   en: {
     brand: "Customs AI",
     pricing: "Pricing",
+    about: "About",
+    history: "History",
     signIn: "Sign in",
     signUp: "Sign up",
     heroTitle1: "Your",
@@ -58,6 +60,8 @@ const translations = {
   th: {
     brand: "Customs AI",
     pricing: "ราคา",
+    about: "เกี่ยวกับ",
+    history: "ประวัติ",
     signIn: "เข้าสู่ระบบ",
     signUp: "สมัครสมาชิก",
     heroTitle1: "ผู้ช่วย",
@@ -334,6 +338,8 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
             <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.pricing}</a>
+            <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            <a href="/about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.about}</a>
           </div>
           <div className="flex items-center gap-4">
             <button
