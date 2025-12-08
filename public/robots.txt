@@ -1,0 +1,10 @@
+# Customs AI - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://customsai.co/sitemap.xml
+
+# Disallow sensitive paths
+Disallow: /api/
+Disallow: /checkout/
