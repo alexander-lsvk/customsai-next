@@ -3,20 +3,19 @@ import { auth } from "@clerk/nextjs/server";
 import OpenAI from "openai";
 import { checkCredits, useCredit, saveClassification } from "@/lib/credits";
 import {
-  searchHSCodesVector,
-  formatVectorResultsForPrompt,
+  formatHSCodesForPrompt,
   getHSCodesByHeading,
-} from "@/lib/vector-search";
+} from "@/lib/hs-codes";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Classification mode: "chapter" (recommended), "vector", or "llm-only"
-type ClassificationMode = "chapter" | "vector" | "llm-only";
+// Classification mode: "chapter" (recommended) or "llm-only"
+type ClassificationMode = "chapter" | "llm-only";
 const CLASSIFICATION_MODE: ClassificationMode = "chapter";
 
-const SYSTEM_PROMPT_VECTOR = `You are an expert in ASEAN Harmonized Tariff Nomenclature (AHTN) 2022 and Thailand Customs Tariff. Your task is to analyze product descriptions and provide accurate HS codes based on the AHTN 2022 nomenclature.
+const SYSTEM_PROMPT_CHAPTER = `You are an expert in ASEAN Harmonized Tariff Nomenclature (AHTN) 2022 and Thailand Customs Tariff. Your task is to analyze product descriptions and provide accurate HS codes based on the AHTN 2022 nomenclature.
 
 CRITICAL - USE ONLY VALID THAILAND HS CODES:
 You will be provided with a list of VALID Thailand HS codes that match the product description. You MUST select your classification from these codes ONLY.
@@ -257,12 +256,12 @@ Respond ONLY with valid JSON, no other text.`,
         // STEP 2: Get all codes from this heading
         const headingCodes = await getHSCodesByHeading(hsHeading);
         console.log(`Found ${headingCodes.length} codes for heading ${hsHeading}`);
-        const codesContext = formatVectorResultsForPrompt(headingCodes);
+        const codesContext = formatHSCodesForPrompt(headingCodes);
 
         // STEP 3: LLM picks the right code from valid options
         stream = await openai.responses.create({
           model: "gpt-5.1",
-          instructions: SYSTEM_PROMPT_VECTOR,
+          instructions: SYSTEM_PROMPT_CHAPTER,
           input: `Classify this product for Thailand customs.
 
 Product: ${description}
@@ -277,66 +276,6 @@ Pick the most specific code that matches this product. Respond ONLY with valid J
           reasoning: { effort: "none" },
         });
       }
-    } else if (CLASSIFICATION_MODE === "vector") {
-      // === VECTOR SEARCH MODE ===
-      console.log("Using vector search mode for classification");
-      const identifyResponse = await openai.responses.create({
-        model: "gpt-5.1",
-        input: `Identify what this product is: "${description}"
-
-If it's a brand name or unfamiliar term, search the web to find out what it actually is.
-
-Return ONLY a JSON object with these fields:
-{
-  "product_name": "The actual product name (not brand)",
-  "category": "General category",
-  "hs_category": "The HS tariff category description",
-  "search_terms": ["term1", "term2", "term3", "term4", "term5"]
-}
-
-Return ONLY valid JSON, no other text.`,
-        tools: [{ type: "web_search_preview" }],
-        reasoning: { effort: "none" },
-      });
-
-      let searchTerms: string[] = [description];
-      try {
-        const identifyText = identifyResponse.output_text || "";
-        console.log("AI identification response:", identifyText);
-        const jsonMatch = identifyText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const identified = JSON.parse(jsonMatch[0]);
-          if (identified.search_terms && Array.isArray(identified.search_terms)) {
-            searchTerms = [...identified.search_terms];
-            if (identified.hs_category) {
-              searchTerms.unshift(identified.hs_category);
-            }
-          }
-        }
-      } catch {
-        console.log("Failed to parse identification, using original description");
-      }
-
-      const searchQuery = searchTerms.join(" ");
-      const relevantCodes = await searchHSCodesVector(searchQuery, 50);
-      console.log("Found codes:", relevantCodes.length);
-      const codesContext = formatVectorResultsForPrompt(relevantCodes);
-
-      stream = await openai.responses.create({
-        model: "gpt-5.1",
-        instructions: SYSTEM_PROMPT_VECTOR,
-        input: `Classify the following product for ASEAN/Thailand customs using HS 2022 codes:
-
-Product: ${description}
-
-VALID THAILAND HS CODES (you MUST choose from these):
-${codesContext}
-
-Respond ONLY with valid JSON, no other text.`,
-        tools: [{ type: "web_search_preview" }],
-        stream: true,
-        reasoning: { effort: "none" },
-      });
     } else {
       // === LLM-ONLY MODE ===
       console.log("Using LLM-only mode for classification");
