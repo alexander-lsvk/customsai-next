@@ -7,6 +7,7 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
+  useAuth,
 } from "@clerk/nextjs";
 import { Mail, MessageSquare, Clock } from "lucide-react";
 
@@ -67,6 +68,7 @@ const translations = {
 
 export default function ContactPage() {
   const { language, toggleLanguage } = useLanguage();
+  const { isSignedIn } = useAuth();
   const t = translations[language];
 
   const faqs = [
@@ -84,7 +86,9 @@ export default function ContactPage() {
           <div className="flex items-center gap-6">
             <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
             <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.pricing}</a>
-            <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            {isSignedIn && (
+              <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            )}
             <a href="/about" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.about}</a>
           </div>
           <div className="flex items-center gap-4">

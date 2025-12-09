@@ -7,6 +7,7 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
+  useAuth,
 } from "@clerk/nextjs";
 import { Zap, Shield, Globe, Brain, CheckCircle } from "lucide-react";
 
@@ -75,6 +76,7 @@ const translations = {
 
 export default function AboutPage() {
   const { language, toggleLanguage } = useLanguage();
+  const { isSignedIn } = useAuth();
   const t = translations[language];
 
   const features = [
@@ -92,7 +94,9 @@ export default function AboutPage() {
           <div className="flex items-center gap-6">
             <a href="/" className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors tracking-tighter">{t.brand}</a>
             <a href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.pricing}</a>
-            <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            {isSignedIn && (
+              <a href="/history" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">{t.history}</a>
+            )}
             <a href="/about" className="text-sm font-medium text-gray-900">{t.about}</a>
           </div>
           <div className="flex items-center gap-4">
