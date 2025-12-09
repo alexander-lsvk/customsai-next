@@ -15,6 +15,7 @@ import {
 } from "@clerk/nextjs";
 import { useLanguage } from "@/components/clerk-provider-with-locale";
 import { ClassificationChat } from "@/components/classification-chat";
+import { FloatingChat } from "@/components/floating-chat";
 
 const translations = {
   en: {
@@ -406,7 +407,7 @@ export default function Home() {
                   {t.describeProduct}
                 </label>
                 {isSignedIn && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full min-w-[140px] h-6 flex items-center justify-center">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full h-6 flex items-center justify-center">
                     {creditsRemaining === null ? (
                       <span className="inline-block w-20 h-3 bg-gray-200 rounded animate-pulse" />
                     ) : creditsRemaining === -1 ? (
@@ -460,12 +461,12 @@ export default function Home() {
                 </Button>
               ) : (
                 <SignUpButton mode="modal" unsafeMetadata={{ language }}>
-                  <Button
+                  <button
                     disabled={!description.trim()}
                     className="w-full h-12 rounded-xl text-base font-medium bg-gray-900 hover:bg-gray-800 text-white transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {t.classify}
-                  </Button>
+                  </button>
                 </SignUpButton>
               )}
             </div>
@@ -534,6 +535,21 @@ export default function Home() {
                           </>
                         )}
                       </button>
+                      {result && (
+                        <div className="mt-3">
+                          <ClassificationChat
+                            context={{
+                              product_description: description,
+                              hs_code: result.primary_hs_code_thailand,
+                              hs_description: result.primary_description || "",
+                              confidence: result.confidence,
+                              reasoning: result.reasoning,
+                              alternatives: result.alternatives,
+                              edge_cases: result.edge_cases,
+                            }}
+                          />
+                        </div>
+                      )}
                     </>
                   ) : (
                     <Skeleton className="h-10 w-40 mx-auto" />
@@ -812,20 +828,22 @@ export default function Home() {
         </div>
       )}
 
-      {/* Classification Chat - appears after result */}
-      {result && (
-        <ClassificationChat
-          context={{
-            product_description: description,
-            hs_code: result.primary_hs_code_thailand,
-            hs_description: result.primary_description || "",
-            confidence: result.confidence,
-            reasoning: result.reasoning,
-            alternatives: result.alternatives,
-            edge_cases: result.edge_cases,
-          }}
-        />
-      )}
+      {/* Floating Ask AI button */}
+      <FloatingChat
+        classificationContext={
+          result
+            ? {
+                product_description: description,
+                hs_code: result.primary_hs_code_thailand,
+                hs_description: result.primary_description || "",
+                confidence: result.confidence,
+                reasoning: result.reasoning,
+                alternatives: result.alternatives,
+                edge_cases: result.edge_cases,
+              }
+            : null
+        }
+      />
     </main>
   );
 }

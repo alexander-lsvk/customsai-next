@@ -11,6 +11,7 @@ import {
   useAuth,
 } from "@clerk/nextjs";
 import { Copy, Check, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { ClassificationChat } from "@/components/classification-chat";
 
 const translations = {
   en: {
@@ -241,6 +242,16 @@ export default function HistoryPage() {
                           <Copy className="w-4 h-4 text-gray-400" />
                         )}
                       </button>
+                      <ClassificationChat
+                        context={{
+                          product_description: item.description,
+                          hs_code: item.hs_code,
+                          hs_description: item.hs_description || "",
+                          confidence: item.confidence,
+                          reasoning: item.reasoning || "",
+                        }}
+                        buttonClassName="px-3 py-1.5 bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer text-sm text-white font-medium"
+                      />
                     </div>
                   </div>
 

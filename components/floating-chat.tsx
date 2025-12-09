@@ -9,22 +9,36 @@ const translations = {
   en: {
     askAI: "Ask AI",
     about: "About",
+    assistant: "AHTN 2022 Assistant",
     askAboutClassification: "Ask questions about this classification",
+    askAnything: "Ask anything about AHTN 2022 codes",
     placeholder: "Ask a question...",
     error: "Sorry, something went wrong. Please try again.",
+    // Suggested questions with context
     whyThisCode: "Why this code instead of alternatives?",
     dutyRate: "What's the duty rate?",
     documentsNeeded: "What documents are needed?",
+    // Suggested questions without context
+    classifyElectronics: "How do I classify electronics?",
+    chapterDifference: "What's the difference between Chapter 84 and 85?",
+    mixedMaterials: "How to classify mixed materials?",
   },
   th: {
     askAI: "ถาม AI",
     about: "เกี่ยวกับ",
+    assistant: "ผู้ช่วย AHTN 2022",
     askAboutClassification: "ถามคำถามเกี่ยวกับการจำแนกนี้",
+    askAnything: "ถามอะไรก็ได้เกี่ยวกับรหัส AHTN 2022",
     placeholder: "ถามคำถาม...",
     error: "ขออภัย เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+    // Suggested questions with context
     whyThisCode: "ทำไมถึงเลือกรหัสนี้แทนตัวเลือกอื่น?",
     dutyRate: "อัตราภาษีเท่าไหร่?",
     documentsNeeded: "ต้องใช้เอกสารอะไรบ้าง?",
+    // Suggested questions without context
+    classifyElectronics: "จำแนกสินค้าอิเล็กทรอนิกส์อย่างไร?",
+    chapterDifference: "ความแตกต่างระหว่างบทที่ 84 และ 85 คืออะไร?",
+    mixedMaterials: "จำแนกวัสดุผสมอย่างไร?",
   },
 };
 
@@ -52,17 +66,11 @@ interface ChatMessage {
   content: string;
 }
 
-interface ClassificationChatProps {
-  context: ClassificationContext;
-  buttonText?: string;
-  buttonClassName?: string;
+interface FloatingChatProps {
+  classificationContext?: ClassificationContext | null;
 }
 
-export function ClassificationChat({
-  context,
-  buttonText,
-  buttonClassName = ""
-}: ClassificationChatProps) {
+export function FloatingChat({ classificationContext }: FloatingChatProps) {
   const { language } = useLanguage();
   const t = translations[language];
 
@@ -99,11 +107,6 @@ export function ClassificationChat({
     };
   }, [isOpen]);
 
-  // Reset messages when context changes (new classification)
-  useEffect(() => {
-    setMessages([]);
-  }, [context.hs_code]);
-
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -113,6 +116,15 @@ export function ClassificationChat({
     setIsLoading(true);
 
     try {
+      // Use classification context if available, otherwise use general context
+      const context = classificationContext || {
+        product_description: "",
+        hs_code: "general",
+        hs_description: "General AHTN 2022 inquiry",
+        confidence: 0,
+        reasoning: "",
+      };
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -181,19 +193,23 @@ export function ClassificationChat({
     }
   };
 
-  const suggestedQuestions = [t.whyThisCode, t.dutyRate, t.documentsNeeded];
+  const suggestedQuestions = classificationContext
+    ? [t.whyThisCode, t.dutyRate, t.documentsNeeded]
+    : [t.classifyElectronics, t.chapterDifference, t.mixedMaterials];
 
   return (
     <>
-      {/* Inline button */}
+      {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={buttonClassName || "inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-full transition-colors cursor-pointer"}
+        className={`fixed bottom-6 right-6 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full shadow-lg hover:bg-gray-800 transition-all z-40 ${
+          isOpen ? "scale-0 opacity-0" : "scale-100 opacity-100"
+        }`}
       >
-        {buttonText || t.askAI}
+        {t.askAI}
       </button>
 
-      {/* Chat panel - modal style */}
+      {/* Chat modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
@@ -211,7 +227,11 @@ export function ClassificationChat({
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <div>
                 <h3 className="font-semibold text-sm">{t.askAI}</h3>
-                <p className="text-xs text-gray-500">{t.about} {context.hs_code}</p>
+                <p className="text-xs text-gray-500">
+                  {classificationContext
+                    ? `${t.about} ${classificationContext.hs_code}`
+                    : t.assistant}
+                </p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -227,7 +247,9 @@ export function ClassificationChat({
               {messages.length === 0 ? (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600 text-center">
-                    {t.askAboutClassification}
+                    {classificationContext
+                      ? t.askAboutClassification
+                      : t.askAnything}
                   </p>
                   <div className="space-y-2">
                     {suggestedQuestions.map((q, i) => (
