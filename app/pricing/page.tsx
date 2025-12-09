@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/clerk-provider-with-locale";
-import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
+import { SignUpButton, SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
 import { Check } from "lucide-react";
 
 const translations = {
   en: {
     brand: "Customs AI",
-    signIn: "Sign in",
-    signUp: "Sign up",
+    getStartedNav: "Get Started",
     pricing: "Pricing",
     about: "About",
     history: "History",
@@ -68,8 +67,7 @@ const translations = {
   },
   th: {
     brand: "Customs AI",
-    signIn: "เข้าสู่ระบบ",
-    signUp: "สมัครสมาชิก",
+    getStartedNav: "เริ่มต้นใช้งาน",
     pricing: "ราคา",
     about: "เกี่ยวกับ",
     history: "ประวัติ",
@@ -276,14 +274,9 @@ export default function PricingPage() {
               {language === "en" ? "TH" : "EN"}
             </button>
             <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
-                  {t.signIn}
-                </button>
-              </SignInButton>
               <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
-                  {t.signUp}
+                  {t.getStartedNav}
                 </button>
               </SignUpButton>
             </SignedOut>

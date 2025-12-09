@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/components/clerk-provider-with-locale";
 import {
-  SignInButton,
   SignUpButton,
   SignedIn,
   SignedOut,
@@ -20,8 +19,7 @@ const translations = {
     history: "History",
     about: "About",
     contact: "Contact",
-    signIn: "Sign in",
-    signUp: "Sign up",
+    getStarted: "Get Started",
     title: "Classification History",
     subtitle: "View your past HS code classifications",
     noHistory: "No classifications yet",
@@ -52,8 +50,7 @@ const translations = {
     history: "ประวัติ",
     about: "เกี่ยวกับ",
     contact: "ติดต่อ",
-    signIn: "เข้าสู่ระบบ",
-    signUp: "สมัครสมาชิก",
+    getStarted: "เริ่มต้นใช้งาน",
     title: "ประวัติการจำแนก",
     subtitle: "ดูประวัติการจำแนกพิกัดศุลกากรของคุณ",
     noHistory: "ยังไม่มีประวัติ",
@@ -303,14 +300,9 @@ export default function HistoryPage() {
               {language === "en" ? "TH" : "EN"}
             </button>
             <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
-                  {t.signIn}
-                </button>
-              </SignInButton>
               <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
-                  {t.signUp}
+                  {t.getStarted}
                 </button>
               </SignUpButton>
             </SignedOut>
@@ -335,11 +327,11 @@ export default function HistoryPage() {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">{t.signInRequired}</h2>
             <p className="text-gray-500 mb-6">{t.signInDesc}</p>
-            <SignInButton mode="modal">
+            <SignUpButton mode="modal" unsafeMetadata={{ language }}>
               <button className="px-6 py-2.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
-                {t.signIn}
+                {t.getStarted}
               </button>
-            </SignInButton>
+            </SignUpButton>
           </div>
         </SignedOut>
 

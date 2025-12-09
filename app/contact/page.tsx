@@ -2,7 +2,6 @@
 
 import { useLanguage } from "@/components/clerk-provider-with-locale";
 import {
-  SignInButton,
   SignUpButton,
   SignedIn,
   SignedOut,
@@ -18,8 +17,7 @@ const translations = {
     history: "History",
     about: "About",
     contact: "Contact",
-    signIn: "Sign in",
-    signUp: "Sign up",
+    getStarted: "Get Started",
     title: "Contact Us",
     subtitle: "We're here to help with any questions",
     emailTitle: "Email Support",
@@ -44,8 +42,7 @@ const translations = {
     history: "ประวัติ",
     about: "เกี่ยวกับ",
     contact: "ติดต่อ",
-    signIn: "เข้าสู่ระบบ",
-    signUp: "สมัครสมาชิก",
+    getStarted: "เริ่มต้นใช้งาน",
     title: "ติดต่อเรา",
     subtitle: "เราพร้อมช่วยเหลือทุกคำถาม",
     emailTitle: "สนับสนุนทางอีเมล",
@@ -100,14 +97,9 @@ export default function ContactPage() {
               {language === "en" ? "TH" : "EN"}
             </button>
             <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
-                  {t.signIn}
-                </button>
-              </SignInButton>
               <SignUpButton mode="modal" unsafeMetadata={{ language }}>
                 <button className="text-sm px-4 py-1.5 rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors cursor-pointer">
-                  {t.signUp}
+                  {t.getStarted}
                 </button>
               </SignUpButton>
             </SignedOut>
